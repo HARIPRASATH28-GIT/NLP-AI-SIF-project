@@ -1,0 +1,607 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SIF AI Safety Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f6f8;
+            color: #1f2937;
+        }
+
+        .header {
+            background: #111827;
+            color: white;
+            padding: 22px 35px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+        }
+
+        .header p {
+            margin-top: 6px;
+            color: #d1d5db;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            margin-bottom: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            resize: vertical;
+            font-size: 16px;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 13px 25px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        .metric {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        .metric h3 {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .metric .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .priority {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .HIGH {
+            color: #dc2626;
+        }
+
+        .MEDIUM {
+            color: #d97706;
+        }
+
+        .LOW {
+            color: #16a34a;
+        }
+
+        .CRITICAL {
+            color: #991b1b;
+        }
+
+        .precursor-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .danger-box {
+            background: #fee2e2;
+            border-left: 5px solid #dc2626;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 8px;
+            color: #991b1b;
+            font-weight: bold;
+        }
+
+        .confidence-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .bar-container {
+            width: 55%;
+            background: #e5e7eb;
+            height: 12px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            background: #2563eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: #dc2626;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 700px) {
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .confidence-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .bar-container {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>🛡️ SIF AI Safety Dashboard</h1>
+        <p>AI-Powered Serious Injury & Fatality Precursor Detection</p>
+    </div>
+
+    <div class="container">
+
+        <!-- Incident Input -->
+        <div class="card">
+
+            <h2>Incident Analysis</h2>
+
+            <p style="margin-bottom:15px;">
+                Enter an incident description to detect potential SIF precursors.
+            </p>
+
+            <textarea
+                id="incidentText"
+                placeholder="Example: An employee was working on an elevated platform without fall protection and fell approximately 20 feet."
+            ></textarea>
+
+            <button id="analyzeBtn" onclick="analyzeIncident()">
+                Analyze Incident
+            </button>
+
+            <div id="status" class="status"></div>
+
+            <div id="error" class="error"></div>
+
+        </div>
+
+
+        <!-- Results -->
+        <div id="results" class="card hidden">
+
+            <h2>AI Analysis Result</h2>
+
+            <div class="result-grid">
+
+                <div class="metric">
+                    <h3>Risk Score</h3>
+                    <div id="riskScore" class="value">0</div>
+                </div>
+
+                <div class="metric">
+                    <h3>Final Priority</h3>
+                    <div id="priority" class="priority">-</div>
+                </div>
+
+                <div class="metric">
+                    <h3>Safety Critical</h3>
+                    <div id="safetyCritical" class="value">-</div>
+                </div>
+
+            </div>
+
+
+            <!-- Precursors -->
+            <div style="margin-top:30px;">
+
+                <h3>Detected SIF Precursors</h3>
+
+                <div id="precursors" class="precursor-list"></div>
+
+            </div>
+
+
+            <!-- Safety Critical Warning -->
+            <div id="dangerBox" class="danger-box hidden"></div>
+
+
+            <!-- NLP Confidence -->
+            <div style="margin-top:30px;">
+
+                <h3>NLP Confidence</h3>
+
+                <div id="confidenceList"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+<script>
+
+    /*
+     * Flask API
+     */
+    const API_URL = window.location.origin;
+
+
+    async function analyzeIncident() {
+
+        const incident =
+            document.getElementById("incidentText").value.trim();
+
+        const button =
+            document.getElementById("analyzeBtn");
+
+        const status =
+            document.getElementById("status");
+
+        const error =
+            document.getElementById("error");
+
+        const results =
+            document.getElementById("results");
+
+
+        error.textContent = "";
+
+        if (!incident) {
+
+            error.textContent =
+                "Please enter an incident description.";
+
+            return;
+        }
+
+
+        button.disabled = true;
+
+        button.textContent = "Analyzing...";
+
+        status.textContent =
+            "🤖 AI is analyzing the incident...";
+
+        results.classList.add("hidden");
+
+
+        try {
+
+            const response = await fetch(
+                API_URL + "/predict",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        incident: incident
+                    })
+                }
+            );
+
+
+            const data = await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error || "Prediction failed"
+                );
+
+            }
+
+
+            displayResults(data);
+
+            status.textContent =
+                "✅ Analysis completed successfully.";
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            error.textContent =
+                "❌ Unable to connect to the SIF AI backend. " +
+                err.message;
+
+            status.textContent = "";
+
+        }
+
+        finally {
+
+            button.disabled = false;
+
+            button.textContent =
+                "Analyze Incident";
+
+        }
+
+    }
+
+
+    function displayResults(data) {
+
+        const results =
+            document.getElementById("results");
+
+        results.classList.remove("hidden");
+
+
+        /*
+         * Risk Score
+         */
+
+        document.getElementById("riskScore")
+            .textContent =
+            data.risk_score;
+
+
+        /*
+         * Priority
+         */
+
+        const priorityElement =
+            document.getElementById("priority");
+
+        priorityElement.textContent =
+            data.final_priority;
+
+        priorityElement.className =
+            "priority " +
+            data.final_priority;
+
+
+        /*
+         * Safety Critical
+         */
+
+        const safetyElement =
+            document.getElementById("safetyCritical");
+
+        safetyElement.textContent =
+            data.safety_critical
+                ? "YES"
+                : "NO";
+
+        safetyElement.className =
+            data.safety_critical
+                ? "value HIGH"
+                : "value LOW";
+
+
+        /*
+         * Precursors
+         */
+
+        const precursorContainer =
+            document.getElementById("precursors");
+
+        precursorContainer.innerHTML = "";
+
+
+        if (
+            data.hybrid_precursors &&
+            data.hybrid_precursors.length > 0
+        ) {
+
+            data.hybrid_precursors.forEach(
+                precursor => {
+
+                    const tag =
+                        document.createElement("div");
+
+                    tag.className = "tag";
+
+                    tag.textContent =
+                        precursor;
+
+                    precursorContainer.appendChild(
+                        tag
+                    );
+
+                }
+            );
+
+        } else {
+
+            precursorContainer.innerHTML =
+                "<span>No predefined precursor detected.</span>";
+
+        }
+
+
+        /*
+         * Safety Critical Warning
+         */
+
+        const dangerBox =
+            document.getElementById("dangerBox");
+
+
+        if (data.safety_critical) {
+
+            dangerBox.classList.remove("hidden");
+
+            dangerBox.innerHTML =
+                "⚠️ SAFETY-CRITICAL COMBINATION DETECTED<br><br>" +
+                data.matched_combinations.join("<br>");
+
+        } else {
+
+            dangerBox.classList.add("hidden");
+
+        }
+
+
+        /*
+         * NLP Confidence
+         */
+
+        const confidenceContainer =
+            document.getElementById("confidenceList");
+
+        confidenceContainer.innerHTML = "";
+
+
+        if (data.nlp_confidence) {
+
+            const confidenceEntries =
+                Object.entries(
+                    data.nlp_confidence
+                );
+
+
+            confidenceEntries.forEach(
+                ([category, confidence]) => {
+
+                    const row =
+                        document.createElement("div");
+
+                    row.className =
+                        "confidence-row";
+
+
+                    const label =
+                        document.createElement("div");
+
+                    label.textContent =
+                        category +
+                        " — " +
+                        confidence +
+                        "%";
+
+
+                    const barContainer =
+                        document.createElement("div");
+
+                    barContainer.className =
+                        "bar-container";
+
+
+                    const bar =
+                        document.createElement("div");
+
+                    bar.className =
+                        "bar";
+
+                    bar.style.width =
+                        Math.min(
+                            confidence,
+                            100
+                        ) + "%";
+
+
+                    barContainer.appendChild(
+                        bar
+                    );
+
+
+                    row.appendChild(
+                        label
+                    );
+
+                    row.appendChild(
+                        barContainer
+                    );
+
+
+                    confidenceContainer.appendChild(
+                        row
+                    );
+
+                }
+            );
+
+        }
+
+    }
+
+</script>
+
+</body>
+</html>
